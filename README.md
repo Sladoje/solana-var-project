@@ -1,125 +1,160 @@
-# Value-at-Risk Analyse eines Krypto-Portfolios
+# Monte-Carlo Value-at-Risk Analyse eines Krypto-Portfolios
 
-**Portfoliozusammensetzung:**  
-50 % Bitcoin (BTC), 40 % Ethereum (ETH), 10 % Solana (SOL)
-
----
-
-## 1. Ziel der Arbeit
-
-Ziel dieses Projekts ist es, das Risiko eines Krypto-Portfolios mithilfe des
-Value-at-Risk-Ansatzes (VaR) zu quantifizieren.  
-Da Kryptowährungen für ihre hohe Volatilität bekannt sind, eignet sich der
-VaR als Kennzahl, um potenzielle Verluste unter normalen Marktbedingungen
-abzuschätzen.
-
-Die Analyse basiert auf historischen Marktdaten und verwendet eine
-Monte-Carlo-Simulation, um mögliche Verlustszenarien zu simulieren.
+Dieses Projekt implementiert eine Monte-Carlo-Simulation zur Berechnung
+des **Value-at-Risk (VaR)** eines Krypto-Portfolios.
+Das README dient dazu, den **Code, die Projektstruktur und die
+Funktionsweise der Simulation** zu erklären.
 
 ---
 
-## 2. Datengrundlage
+## Projektidee und Fragestellung
 
-- **Datenquelle:** Yahoo Finance (`yfinance`)
-- **Assets:** Bitcoin (BTC), Ethereum (ETH), Solana (SOL)
-- **Zeitraum:** Letzte 12 Monate
-- **Preisdaten:** Schlusskurse (Close)
+Ziel des Projekts ist die Beantwortung folgender Frage:
 
-Aus den Kursdaten werden logarithmische Tagesrenditen berechnet, da diese
-in der Finanzanalyse üblich sind und eine bessere mathematische
-Handhabung ermöglichen.
+**Welcher maximale Tagesverlust ist für ein Krypto-Portfolio mit einer
+gegebenen Wahrscheinlichkeit zu erwarten?**
 
----
-
-## 3. Methodik
-
-### 3.1 Portfolio-Renditen
-Die einzelnen Asset-Renditen werden entsprechend der vorgegebenen
-Portfolio-Gewichtung kombiniert:
-
-- 50 % BTC  
-- 40 % ETH  
-- 10 % SOL  
-
-Dadurch entsteht eine Zeitreihe der täglichen Portfolio-Renditen.
+Der Fokus liegt auf der praktischen Umsetzung einer Monte-Carlo-Simulation
+in Python und nicht auf einer theoretischen Abhandlung.
 
 ---
 
-### 3.2 Monte-Carlo-Simulation
+## Portfolio und Annahmen
 
-Zur Risikoschätzung wird eine **historische Monte-Carlo-Simulation**
-(Bootstrap-Verfahren) verwendet:
+### Portfoliozusammensetzung
+- Bitcoin (BTC): 50 %
+- Ethereum (ETH): 40 %
+- Solana (SOL): 10 %
 
-- Zufälliges Ziehen aus den historischen Portfolio-Renditen
-- Anzahl der Simulationen: **100.000**
-- Investitionssumme: **10.000 €**
-- Betrachtungshorizont: **1 Tag**
-- Konfidenzniveau: **99 %**
-
-Aus den simulierten Renditen werden mögliche Tagesverluste berechnet.
-Der Value-at-Risk ergibt sich als das entsprechende Quantil der
-Verlustverteilung.
+### Annahmen
+- Betrachtung eines einzelnen Handelstags
+- **Investitionssumme: 10.000 €**
+- Risikoquantil: **99 % (alpha = 0.01)**
+- Verwendung historischer Tagesrenditen
 
 ---
 
-### 3.3 Unsicherheitsabschätzung
+## Projektstruktur
 
-Zusätzlich wird ein Bootstrap-Verfahren mit 500 Wiederholungen eingesetzt,
-um den Standardfehler sowie ein 95 %-Konfidenzintervall des VaR zu schätzen.
-Aufgrund der hohen Anzahl an Simulationen ist die VaR-Schätzung sehr stabil.
+solana-var-project/
+├── figures/
+│   └── simulated_var_histogram.png
+├── notebooks/
+│   └── finale_analyse.ipynb
+├── src/
+│   ├── __init__.py
+│   └── simulate_var.py
+├── .gitignore
+├── README.md
+└── requirements.txt
 
----
+## Ablauf der Analyse
 
-## 4. Ergebnisse
+1. Datenimport und Vorbereitung
 
-Die Monte-Carlo-Simulation liefert eine Verteilung möglicher Tagesverluste
-des Portfolios.  
-Der geschätzte **1-Tages-Value-at-Risk (99 %)** liegt im negativen Bereich
-und beschreibt den maximal erwarteten Verlust unter normalen Marktbedingungen.
+Im Notebook finale_analyse.ipynb werden historische Kursdaten für
+Bitcoin, Ethereum und Solana über die Bibliothek yfinance geladen.
+Verwendet werden tägliche Schlusskurse der letzten 12 Monate.
 
-Die hohe Anzahl an Simulationen führt zu einem sehr engen
-Konfidenzintervall, was auf eine geringe numerische Unsicherheit der
-Schätzung hinweist.
+Aus den Kursdaten werden logarithmische Renditen berechnet:
+log_returns = np.log(df / df.shift(1)).dropna()
 
-Ein Histogramm der simulierten Verluste mit markiertem VaR ist in der
-folgenden Abbildung dargestellt:
+2. Berechnung der Portfolio-Renditen
 
-![Histogramm der simulierten Verluste](reports/simulated_var_histogram.png)
+Die einzelnen Asset-Renditen werden entsprechend der Portfolio-Gewichtung
+kombiniert:
+weights = np.array([0.5, 0.4, 0.1])
+portfolio_returns = log_returns @ weights
 
----
+Das Ergebnis ist eine Zeitreihe täglicher Portfolio-Renditen, die als
+Eingabe für die Monte-Carlo-Simulation dient.
 
-## 5. Interpretation
 
-Der 99 %-VaR kann wie folgt interpretiert werden:
-Mit einer Wahrscheinlichkeit von 99 % wird der Tagesverlust des Portfolios
-den geschätzten VaR-Wert nicht überschreiten.
+Die Funktion simulate_var()
 
-Dabei ist zu beachten:
-- Der VaR basiert ausschließlich auf historischen Daten
-- Extremereignisse außerhalb der Beobachtungsperiode werden nicht explizit
-  berücksichtigt
-- Der VaR macht keine Aussage über die Höhe möglicher Verluste jenseits
-  der VaR-Schwelle
+Die eigentliche Risikoberechnung erfolgt in der Funktion
+simulate_var() in src/simulate_var.py.
 
----
+Funktionsaufruf
+simulate_var(
+    returns,
+    investment=10000,
+    alpha=0.01,
+    N=100_000,
+    B=500,
+    save_plot=False,
+    plot_path="../figures/simulated_var_histogram.png"
+)
+Bedeutung der Parameter
 
-## 6. Fazit
+returns
+Zeitreihe der Portfolio-Log-Renditen.
 
-Die Analyse zeigt, dass sich der Value-at-Risk-Ansatz gut eignet, um das
-Risiko eines Krypto-Portfolios quantitativ zu erfassen.
-Trotz der Einfachheit des Modells liefert die Monte-Carlo-Simulation
-eine anschauliche Einschätzung möglicher Verluste.
+investment = 10000
+Investitionssumme in Euro, auf die sich alle simulierten Verluste beziehen.
 
-Mögliche Erweiterungen des Modells wären:
-- Mehrtägige VaR-Berechnung
-- Berücksichtigung von Korrelationen und Volatilitätsmodellen
-- Ergänzung durch Stress-Tests oder Expected Shortfall
+alpha = 0.01
+Risikolevel für den VaR.
+Ein Wert von 0.01 entspricht einem 99 %-Value-at-Risk.
 
----
+N = 100_000
+Anzahl der Monte-Carlo-Ziehungen zur Simulation möglicher Tagesverluste.
 
-## 7. Projektstruktur
+B = 500
+Anzahl der Bootstrap-Wiederholungen zur Schätzung des Standardfehlers
+und eines 95 %-Konfidenzintervalls.
 
-- `notebooks/finale_analyse.ipynb` – Hauptanalyse
-- `src/simulate_var.py` – Monte-Carlo- und Bootstrap-Funktionen
-- `reports/simulated_var_histogram.png` – Visualisierung der Ergebnisse
-- `requirements.txt` – verwendete Python-Pakete
+save_plot
+Steuert, ob eine Grafik der simulierten Verluste gespeichert wird.
+
+plot_path
+Relativer Pfad zum Speicherort der erzeugten Grafik.
+
+⸻
+
+Monte-Carlo-Simulation
+
+Die Monte-Carlo-Simulation basiert auf einem Bootstrap-Ansatz:
+	•	Zufälliges Ziehen aus den historischen Portfolio-Renditen
+	•	Umrechnung der Renditen in Verluste:
+  sim_losses = -investment * sim_returns
+  Berechnung des Value-at-Risk als entsprechendes Quantil der
+  Verlustverteilung:
+  VaR = np.percentile(sim_losses, alpha * 100)
+
+  Bootstrap und Unsicherheit
+
+Zusätzlich wird ein Bootstrap-Verfahren eingesetzt, um die Unsicherheit
+der VaR-Schätzung zu beurteilen.
+Dabei wird der VaR mehrfach aus neu gezogenen Stichproben berechnet.
+
+Das Ergebnis sind:
+	•	ein Standardfehler des VaR
+	•	ein 95 %-Konfidenzintervall
+
+Aufgrund der hohen Anzahl an Monte-Carlo-Ziehungen ist die
+VaR-Schätzung numerisch sehr stabil.
+
+⸻
+
+Visualisierung
+
+Optional wird ein Histogramm der simulierten Verluste erzeugt.
+Der berechnete VaR wird als vertikale Linie im Plot dargestellt und
+im Ordner figures/ gespeichert.
+
+⸻
+
+Hinweis zur Interpretation
+
+Der berechnete Value-at-Risk gibt den maximal erwarteten Tagesverlust
+unter normalen Marktbedingungen an.
+Extremereignisse außerhalb der historischen Datenbasis werden nicht
+explizit berücksichtigt.
+
+⸻
+
+Abhängigkeiten
+
+Alle verwendeten Python-Pakete sind in der Datei requirements.txt
+aufgeführt.
